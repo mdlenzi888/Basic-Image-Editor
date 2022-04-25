@@ -3,7 +3,7 @@ from PIL import Image, ImageFilter, ImageOps
 from io import BytesIO
 
 
-def update_img(orig, blur, contrast, emboss, contour, flipx, flipy):
+def update_img(orig, blur, contrast, emboss, contour, flipx, flipy, water):
     global img
 
     img = orig.filter(ImageFilter.GaussianBlur(blur))
@@ -17,6 +17,17 @@ def update_img(orig, blur, contrast, emboss, contour, flipx, flipy):
     if flipy:
         img = ImageOps.mirror(img)
 
+    watermark = Image.open("logo.png")
+    watermark_adj = watermark.resize((int(orig_img.width * .4), int(orig_img.height * .15)))
+    if water == 'Watermark Bottom Left':
+        img.paste(im=watermark_adj, box=(10, orig_img.height - watermark_adj.height - 10), mask=watermark_adj)
+    elif water == 'Watermark Bottom Right':
+        img.paste(im=watermark_adj, box=(orig_img.width - watermark_adj.width - 10, orig_img.height - watermark_adj.height - 10), mask=watermark_adj)
+    elif water == 'Watermark Top Left':
+        img.paste(im=watermark_adj, box=(10, watermark_adj.height - 10), mask=watermark_adj)
+    elif water == 'Watermark Top Right':
+        img.paste(im=watermark_adj, box=(orig_img.width - watermark_adj.width - 10, watermark_adj.height - 10), mask=watermark_adj)
+
     bio = BytesIO()
     img.save(bio, format='png')
     window['IMG'].update(data=bio.getvalue())
@@ -29,6 +40,12 @@ left_col = sg.Column([
     [sg.Frame(title="Contrast", layout=[[sg.Slider((0, 10), orientation='h', key='CONTRAST')]])],
     [sg.Checkbox("Emboss", key='EMB'), sg.Checkbox("Contour", key='CONTOUR')],
     [sg.Checkbox("Flip x    ", key='FLIPX'), sg.Checkbox("Flip y", key='FLIPY')],
+    [sg.Combo(['No Watermark',
+               'Watermark Bottom Left',
+               'Watermark Bottom Right',
+               'Watermark Top Left',
+               'Watermark Top Right'],
+              default_value='No Watermark', key='WATER')],
     [sg.Button("Save Image", key='SAVE')],
 ])
 right_col = sg.Column([
@@ -49,7 +66,8 @@ while True:
                values['EMB'],
                values['CONTOUR'],
                values['FLIPX'],
-               values['FLIPY'],)
+               values['FLIPY'],
+               values['WATER'],)
     if event == 'SAVE':
         save_path = f'{sg.popup_get_file("Save As", save_as=True, no_window=True)}.png'
         img.save(save_path, 'PNG')
